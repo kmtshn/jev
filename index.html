@@ -682,6 +682,7 @@
               "Authorization":"Bearer " + apiKey,
               "Accept":"application/json"
             },
+            credentials:"omit",
             cache:"no-store"
           });
 
@@ -753,6 +754,8 @@
               "Authorization":"Bearer " + apiKey,
               "Content-Type":"application/json"
             },
+            credentials:"omit",
+            cache:"no-store",
             body:JSON.stringify(payload)
           });
           var rawText = await response.text();
