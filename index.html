@@ -106,8 +106,13 @@
     .icon-btn:hover{background:#eeeef8;color:var(--text)}
     .api-note{font-size:11px;line-height:1.6;color:var(--muted)}
     .status-line{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
-    .status-dot{width:8px;height:8px;border-radius:50%;background:#b8bdca}
-    .status-dot.ready{background:var(--success);box-shadow:0 0 0 4px rgba(21,129,95,.09)}
+    .status-dot{width:8px;height:8px;border-radius:50%;background:#b8bdca;flex:0 0 auto}
+    .status-dot.input{background:var(--brand);box-shadow:0 0 0 4px rgba(91,91,214,.08)}
+    .status-dot.testing{background:var(--warn);box-shadow:0 0 0 4px rgba(168,101,9,.08)}
+    .status-dot.connected{background:var(--success);box-shadow:0 0 0 4px rgba(21,129,95,.09)}
+    .status-dot.error{background:var(--danger);box-shadow:0 0 0 4px rgba(191,63,79,.08)}
+    .api-test-button{width:100%;min-height:40px;font-size:12px}
+    .api-test-button:disabled{opacity:.55;cursor:not-allowed}
     .main-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);gap:18px;align-items:start}
     .editor{padding:20px}
     .result-panel{padding:20px;position:sticky;top:18px;min-height:480px}
@@ -289,9 +294,10 @@
           </div>
           <div class="secret-wrap">
             <label class="sr-only" for="apiKey">TypeSafe API Key</label>
-            <input id="apiKey" class="input" type="password" autocomplete="off" spellcheck="false" placeholder="ts_... / APIキーを入力">
+            <input id="apiKey" class="input" type="password" autocomplete="off" spellcheck="false" placeholder="TypeSafe APIキーを入力">
             <button id="toggleKey" class="icon-btn" type="button" aria-label="APIキーの表示切替" title="表示 / 非表示">◉</button>
           </div>
+          <button id="apiTestButton" class="secondary api-test-button" type="button">API通信テスト</button>
           <div class="status-line"><span id="keyStatusDot" class="status-dot"></span><span id="keyStatus">APIキーを入力してください</span></div>
           <div class="api-note">キーはこのページのメモリ上だけで利用し、localStorage / Cookie には保存しません。送信先は TypeSafe API のみです。</div>
         </div>
@@ -360,6 +366,7 @@
 
       var API_BASE = String(window.JEV_API_BASE || "https://api.typesafe.ai").replace(/\/+$/, "");
       var API_URL = API_BASE + "/v1/systemone";
+      var MODELS_URL = API_BASE + "/v1/models";
       var MODEL = "jev-latest";
       var questionsEl = document.getElementById("questions");
       var stateInput = document.getElementById("stateInput");
@@ -370,6 +377,7 @@
       var addQuestionBtn = document.getElementById("addQuestion");
       var resetButton = document.getElementById("resetButton");
       var toggleKey = document.getElementById("toggleKey");
+      var apiTestButton = document.getElementById("apiTestButton");
       var keyStatus = document.getElementById("keyStatus");
       var keyStatusDot = document.getElementById("keyStatusDot");
       var charCount = document.getElementById("charCount");
@@ -649,6 +657,74 @@
         return detail ? "TypeSafe API: " + detail : "TypeSafe APIからエラーが返されました（HTTP " + status + "）。";
       }
 
+      function setApiStatus(message,state){
+        keyStatus.textContent = message;
+        keyStatusDot.className = "status-dot" + (state ? " " + state : "");
+      }
+
+      async function testApiConnection(){
+        var apiKey = apiKeyInput.value.trim();
+        if(!apiKey){
+          apiKeyInput.focus();
+          setApiStatus("APIキーを入力してください","error");
+          return;
+        }
+
+        apiTestButton.disabled = true;
+        apiTestButton.textContent = "通信確認中...";
+        setApiStatus("TypeSafe APIへ接続しています...","testing");
+        var started = performance.now();
+
+        try{
+          var response = await fetch(MODELS_URL,{
+            method:"GET",
+            headers:{
+              "Authorization":"Bearer " + apiKey,
+              "Accept":"application/json"
+            },
+            cache:"no-store"
+          });
+
+          var rawText = await response.text();
+          var data = null;
+          try{ data = rawText ? JSON.parse(rawText) : null; }catch(_){ data = rawText; }
+
+          if(response.ok){
+            var elapsed = Math.round(performance.now() - started);
+            var count = 0;
+            if(data && Array.isArray(data.data)) count = data.data.length;
+            else if(data && Array.isArray(data.models)) count = data.models.length;
+            else if(Array.isArray(data)) count = data.length;
+            setApiStatus(
+              "通信OK · 認証成功 · " + elapsed + " ms" + (count ? " · " + count + " model" + (count === 1 ? "" : "s") : ""),
+              "connected"
+            );
+            return;
+          }
+
+          if(response.status === 401 || response.status === 403){
+            setApiStatus("認証NG · APIキーまたは権限を確認してください","error");
+          }else if(response.status === 402){
+            setApiStatus("通信OK · 支払い/クレジット設定の確認が必要です","error");
+          }else if(response.status === 429){
+            setApiStatus("通信OK · APIのリクエスト上限に達しています","error");
+          }else{
+            setApiStatus("通信OK · TypeSafe APIがHTTP " + response.status + "を返しました","error");
+          }
+        }catch(err){
+          var direct = API_BASE === "https://api.typesafe.ai";
+          setApiStatus(
+            direct
+              ? "接続失敗 · CORSまたはネットワーク制限の可能性があります"
+              : "接続失敗 · API中継またはネットワークを確認してください",
+            "error"
+          );
+        }finally{
+          apiTestButton.disabled = false;
+          apiTestButton.textContent = "API通信テスト";
+        }
+      }
+
       async function runDecision(){
         var apiKey = apiKeyInput.value.trim();
         if(!apiKey){
@@ -730,11 +806,9 @@
 
       function updateKeyStatus(){
         if(apiKeyInput.value.trim()){
-          keyStatus.textContent = "入力済み · このタブ内だけで利用";
-          keyStatusDot.classList.add("ready");
+          setApiStatus("入力済み · 未テスト · このタブ内だけで利用","input");
         }else{
-          keyStatus.textContent = "APIキーを入力してください";
-          keyStatusDot.classList.remove("ready");
+          setApiStatus("APIキーを入力してください","");
         }
       }
 
@@ -779,6 +853,7 @@
       runButton.addEventListener("click",runDecision);
       stateInput.addEventListener("input",updateCharCount);
       apiKeyInput.addEventListener("input",updateKeyStatus);
+      apiTestButton.addEventListener("click",testApiConnection);
       toggleKey.addEventListener("click",function(){
         apiKeyInput.type = apiKeyInput.type === "password" ? "text" : "password";
         toggleKey.textContent = apiKeyInput.type === "password" ? "◉" : "◎";
