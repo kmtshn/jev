@@ -1,0 +1,6 @@
+name = "jev-api-proxy"
+main = "src/index.js"
+compatibility_date = "2026-09-20"
+
+[observability]
+enabled = false
