@@ -1,6 +1,3 @@
-// GitHub Pages -> TypeSafe API direct calls can be blocked by browser CORS.
-// After deploying the included Cloudflare Worker, set its origin here, for example:
-// window.JEV_API_BASE = "https://jev-api-proxy.example.workers.dev";
-//
-// Leave blank only for environments where direct browser access to TypeSafe is permitted.
-window.JEV_API_BASE = "";
+// GitHub Pages -> Cloudflare Worker -> TypeSafe API.
+// The Worker forwards the user-entered Authorization header for that request only.
+window.JEV_API_BASE = "https://jev-api-proxy.kamata-shun-oki.workers.dev";

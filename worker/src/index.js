@@ -17,6 +17,7 @@ function json(body, status, origin) {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
       ...corsHeaders(origin),
     },
   });
@@ -30,6 +31,13 @@ export default {
       return new Response("Forbidden origin", { status: 403 });
     }
 
+    const url = new URL(request.url);
+    const allowedPath = url.pathname === "/v1/systemone" || url.pathname === "/v1/models";
+
+    if (!allowedPath) {
+      return json({ error: "Not found" }, 404, origin);
+    }
+
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
@@ -37,17 +45,16 @@ export default {
       });
     }
 
-    const url = new URL(request.url);
     const allowed =
       (request.method === "POST" && url.pathname === "/v1/systemone") ||
       (request.method === "GET" && url.pathname === "/v1/models");
 
     if (!allowed) {
-      return json({ error: "Not found" }, 404, origin);
+      return json({ error: "Method not allowed" }, 405, origin);
     }
 
     const authorization = request.headers.get("Authorization");
-    if (!authorization || !authorization.startsWith("Bearer ")) {
+    if (!authorization || !authorization.startsWith("Bearer ") || !authorization.slice(7).trim()) {
       return json({ error: "Missing API key" }, 401, origin);
     }
 
@@ -58,12 +65,18 @@ export default {
       headers.set("Content-Type", "application/json");
     }
 
-    const upstream = await fetch(TYPESAFE_ORIGIN + url.pathname, {
-      method: request.method,
-      headers,
-      body: request.method === "POST" ? await request.arrayBuffer() : undefined,
-      redirect: "manual",
-    });
+    let upstream;
+    try {
+      upstream = await fetch(TYPESAFE_ORIGIN + url.pathname, {
+        method: request.method,
+        headers,
+        body: request.method === "POST" ? request.body : undefined,
+        redirect: "manual",
+        cache: "no-store",
+      });
+    } catch (_error) {
+      return json({ error: "Upstream connection failed" }, 502, origin);
+    }
 
     const responseHeaders = new Headers();
     responseHeaders.set(
@@ -71,6 +84,7 @@ export default {
       upstream.headers.get("Content-Type") || "application/json; charset=utf-8"
     );
     responseHeaders.set("Cache-Control", "no-store");
+    responseHeaders.set("X-Content-Type-Options", "nosniff");
     for (const [key, value] of Object.entries(corsHeaders(origin))) {
       responseHeaders.set(key, value);
     }

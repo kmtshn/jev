@@ -5,7 +5,7 @@ TypeSafe Jev をブラウザから試すための、GitHub Pages対応の静的W
 ## 主な機能
 
 - TypeSafe APIキーをユーザー自身が入力
-- APIキーは localStorage / Cookie に保存しない
+- APIキーは localStorage / sessionStorage / Cookie に保存しない
 - 判断させたい内容（State）を自由入力
 - 複数質問を1回のAPIリクエストで実行
 - Choice / Noul / Score に対応
@@ -37,8 +37,8 @@ https://docs.typesafe.ai/
 
 ## セキュリティ上の注意
 
-このアプリは完全な静的サイトなので、入力したAPIキーはユーザーのブラウザからTypeSafe APIへ直接送信されます。
-アプリのコードではAPIキーをlocalStorage、sessionStorage、Cookieへ保存しません。
+GitHub Pages版では、入力したAPIキーをユーザーのブラウザからCloudflare Workerへ送り、Workerがそのリクエストに限ってTypeSafe APIへ中継します。
+WorkerやアプリのコードではAPIキーをlocalStorage、sessionStorage、Cookieへ保存しません。
 
 ただし、ブラウザ上でAPIキーを利用する以上、そのブラウザの開発者ツールや実行中のページからキーを参照できる点は避けられません。
 自分自身のAPIキーを自分の端末で利用する用途を想定しています。
@@ -53,7 +53,7 @@ Personal / experimental project.
 TypeSafe API はブラウザからの直接アクセスが CORS でブロックされる場合があります。
 Windows版やPython/cURLでは動くのにGitHub Pages版だけ `Failed to fetch` になる場合、APIキーではなくブラウザのCORS制約が原因です。
 
-このリポジトリには `worker/` に Cloudflare Worker の最小中継コードを含めています。
-Workerをデプロイ後、`config.js` の `window.JEV_API_BASE` にWorker URLを設定してください。
+このリポジトリには `worker/` にCloudflare Workerの最小中継コードを含めています。
+Workerをデプロイ後、`config.js` の `window.JEV_API_BASE` にWorker URLを設定してください。未設定のままでは、開発用にTypeSafe APIへ直接接続するため、GitHub Pages上ではCORSで失敗する可能性があります。
 
 詳細: `worker/README.md`
