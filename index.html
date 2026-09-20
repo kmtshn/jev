@@ -357,7 +357,7 @@
     (function(){
       "use strict";
 
-      var API_URL = "https://api.typesafe.ai/v1/systemone";
+      var API_BASE = String(window.JEV_API_BASE || "https://api.typesafe.ai").replace(/\\/+$/, "");\n      var API_URL = API_BASE + "/v1/systemone";
       var MODEL = "jev-latest";
       var questionsEl = document.getElementById("questions");
       var stateInput = document.getElementById("stateInput");
@@ -707,7 +707,7 @@
           if(err && err.api){
             showError(friendlyApiError(err.status,err.data),err.data);
           }else{
-            showError("APIへ接続できませんでした。ネットワーク、ブラウザの制限、TypeSafe APIの状態を確認してください。");
+            var direct = API_BASE === "https://api.typesafe.ai";\n            showError(direct\n              ? "ブラウザからTypeSafe APIへの直接通信がCORSでブロックされた可能性が高いです。Windows版で同じAPIキーが使える場合、キーの問題ではありません。GitHub Pages版はAPI中継（Worker）の設定が必要です。"\n              : "API中継へ接続できませんでした。Worker URL、ネットワーク、Workerの状態を確認してください。");
           }
         }finally{
           runButton.disabled = false;
