@@ -46,3 +46,14 @@ https://docs.typesafe.ai/
 ## License
 
 Personal / experimental project.
+
+
+## GitHub Pages でのAPI通信について
+
+TypeSafe API はブラウザからの直接アクセスが CORS でブロックされる場合があります。
+Windows版やPython/cURLでは動くのにGitHub Pages版だけ `Failed to fetch` になる場合、APIキーではなくブラウザのCORS制約が原因です。
+
+このリポジトリには `worker/` に Cloudflare Worker の最小中継コードを含めています。
+Workerをデプロイ後、`config.js` の `window.JEV_API_BASE` にWorker URLを設定してください。
+
+詳細: `worker/README.md`
