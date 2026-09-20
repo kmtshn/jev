@@ -299,7 +299,7 @@
           </div>
           <button id="apiTestButton" class="secondary api-test-button" type="button">API通信テスト</button>
           <div class="status-line"><span id="keyStatusDot" class="status-dot"></span><span id="keyStatus">APIキーを入力してください</span></div>
-          <div class="api-note">キーはこのページのメモリ上だけで利用し、localStorage / Cookie には保存しません。GitHub Pagesでは設定済みのWorkerを経由してTypeSafeへ送信します。</div>
+          <div class="api-note">キーはこのページのメモリ上だけで利用し、localStorage / sessionStorage / Cookie には保存しません。同じCloudflare WorkerからTypeSafeへ送信します。</div>
         </div>
       </div>
     </section>
@@ -359,12 +359,11 @@
     </footer>
   </div>
 
-  <script src="config.js"></script>
   <script>
     (function(){
       "use strict";
 
-      var API_BASE = String(window.JEV_API_BASE || "https://api.typesafe.ai").replace(/\/+$/, "");
+      var API_BASE = "";
       var API_URL = API_BASE + "/v1/systemone";
       var MODELS_URL = API_BASE + "/v1/models";
       var MODEL = "jev-latest";
@@ -713,11 +712,8 @@
             setApiStatus("通信OK · TypeSafe APIがHTTP " + response.status + "を返しました","error");
           }
         }catch(err){
-          var direct = API_BASE === "https://api.typesafe.ai";
           setApiStatus(
-            direct
-              ? "接続失敗 · CORSまたはネットワーク制限の可能性があります"
-              : "接続失敗 · API中継またはネットワークを確認してください",
+            "接続失敗 · Cloudflare Workerまたはネットワークを確認してください",
             "error"
           );
         }finally{
@@ -788,10 +784,7 @@
           if(err && err.api){
             showError(friendlyApiError(err.status,err.data),err.data);
           }else{
-            var direct = API_BASE === "https://api.typesafe.ai";
-            showError(direct
-              ? "ブラウザからTypeSafe APIへの直接通信がCORSでブロックされた可能性が高いです。Windows版で同じAPIキーが使える場合、キーの問題ではありません。GitHub Pages版はAPI中継（Worker）の設定が必要です。"
-              : "API中継へ接続できませんでした。Worker URL、ネットワーク、Workerの状態を確認してください。");
+            showError("Cloudflare Workerへ接続できませんでした。ネットワークまたはWorkerの状態を確認してください。");
           }
         }finally{
           runButton.disabled = false;

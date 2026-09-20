@@ -1,5 +1,4 @@
 const TYPESAFE_ORIGIN = "https://api.typesafe.ai";
-const ALLOWED_ORIGIN = "https://kmtshn.github.io";
 
 function corsHeaders(origin) {
   return {
@@ -24,19 +23,20 @@ function json(body, status, origin) {
 }
 
 export default {
-  async fetch(request) {
-    const origin = request.headers.get("Origin") || "";
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const isSystemOne = url.pathname === "/v1/systemone";
+    const isModels = url.pathname === "/v1/models";
 
-    if (origin !== ALLOWED_ORIGIN) {
+    if (!isSystemOne && !isModels) {
+      return env.ASSETS.fetch(request);
+    }
+
+    const requestOrigin = request.headers.get("Origin");
+    if (requestOrigin && requestOrigin !== url.origin) {
       return new Response("Forbidden origin", { status: 403 });
     }
-
-    const url = new URL(request.url);
-    const allowedPath = url.pathname === "/v1/systemone" || url.pathname === "/v1/models";
-
-    if (!allowedPath) {
-      return json({ error: "Not found" }, 404, origin);
-    }
+    const origin = requestOrigin || url.origin;
 
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -46,8 +46,8 @@ export default {
     }
 
     const allowed =
-      (request.method === "POST" && url.pathname === "/v1/systemone") ||
-      (request.method === "GET" && url.pathname === "/v1/models");
+      (request.method === "POST" && isSystemOne) ||
+      (request.method === "GET" && isModels);
 
     if (!allowed) {
       return json({ error: "Method not allowed" }, 405, origin);

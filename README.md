@@ -1,6 +1,6 @@
 # Jev Decision Studio
 
-TypeSafe Jev をブラウザから試すための、GitHub Pages対応の静的Webアプリです。
+TypeSafe Jevをブラウザから試すための、Cloudflare Workers対応アプリです。
 
 ## 主な機能
 
@@ -18,17 +18,15 @@ TypeSafe Jev をブラウザから試すための、GitHub Pages対応の静的W
 
 ## 公開
 
-GitHub Actions の `Deploy GitHub Pages` ワークフローで `main` ブランチを公開します。
+Cloudflare Workers Static Assetsで静的ファイルとAPI中継を同じWorkerから配信します。
 
 公開URL:
 
-`https://kmtshn.github.io/jev/`
-
-初回のみ、リポジトリの **Settings → Pages** で GitHub Pages が有効になっていることを確認してください。ワークフロー側でも有効化を試みます。
+`https://jev-api-proxy.kamata-shun-oki.workers.dev/`
 
 ## API
 
-- Endpoint: `POST https://api.typesafe.ai/v1/systemone`
+- Endpoint: `POST /v1/systemone`（同一Cloudflare Worker）
 - Model: `jev-latest`
 - Authorization: Bearer API key
 
@@ -37,7 +35,7 @@ https://docs.typesafe.ai/
 
 ## セキュリティ上の注意
 
-GitHub Pages版では、入力したAPIキーをユーザーのブラウザからCloudflare Workerへ送り、Workerがそのリクエストに限ってTypeSafe APIへ中継します。
+入力したAPIキーをユーザーのブラウザから同一Cloudflare Workerへ送り、Workerがそのリクエストに限ってTypeSafe APIへ中継します。
 WorkerやアプリのコードではAPIキーをlocalStorage、sessionStorage、Cookieへ保存しません。
 
 ただし、ブラウザ上でAPIキーを利用する以上、そのブラウザの開発者ツールや実行中のページからキーを参照できる点は避けられません。
@@ -48,12 +46,14 @@ WorkerやアプリのコードではAPIキーをlocalStorage、sessionStorage、
 Personal / experimental project.
 
 
-## GitHub Pages でのAPI通信について
+## Cloudflare WorkerでのAPI通信について
 
-TypeSafe API はブラウザからの直接アクセスが CORS でブロックされる場合があります。
-Windows版やPython/cURLでは動くのにGitHub Pages版だけ `Failed to fetch` になる場合、APIキーではなくブラウザのCORS制約が原因です。
+`worker/src/index.js` が `/v1/systemone` と `/v1/models` だけをTypeSafe APIへ中継し、それ以外のパスは静的アセットとして配信します。
 
-このリポジトリには `worker/` にCloudflare Workerの最小中継コードを含めています。
-Workerをデプロイ後、`config.js` の `window.JEV_API_BASE` にWorker URLを設定してください。未設定のままでは、開発用にTypeSafe APIへ直接接続するため、GitHub Pages上ではCORSで失敗する可能性があります。
+ルートディレクトリでのデプロイ:
+
+```bash
+npx wrangler deploy
+```
 
 詳細: `worker/README.md`
