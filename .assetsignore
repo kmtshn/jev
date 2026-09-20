@@ -2,7 +2,6 @@ worker/
 .github/
 .git/
 README.md
-config.js
 wrangler.jsonc
 .assetsignore
 .wrangler/
